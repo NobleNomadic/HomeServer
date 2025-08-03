@@ -6,5 +6,5 @@ javac *.java
 mv * ../build
 cd ../build
 mv *.java ../src
-java Relay 5477
+java Server 8080
 cd ..
