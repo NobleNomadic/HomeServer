@@ -10,7 +10,7 @@ public class Server {
   ServerSocket serverSocket;
 
   // Route file data
-  String[] routeFiledata;
+  String[] routingData;
   String routeFilename;
 
   // Constructor
@@ -60,12 +60,19 @@ public class Server {
     }
   }
 
+  // Determine content type based on file extension
   private String getContentType(String filename) {
-    return null;
+    if (filename.endsWith(".html") || filename.endsWith(".htm")) return "text/html";
+    if (filename.endsWith(".txt")) return "text/plain";
+    if (filename.endsWith(".jpg") || filename.endsWith(".jpeg")) return "image/jpeg";
+    if (filename.endsWith(".png")) return "image/png";
+    if (filename.endsWith(".css")) return "text/css";
+    if (filename.endsWith(".js")) return "application/javascript";
+    return "application/octet-stream";
   }
 
   // Generate a string response to send back over socket
-  private String  generateResponse(String request) {
+  private String generateResponse(String request) {
     // Convert string to tokens
     String[] tokens = request.split(" ");
     // Verify tokens
@@ -81,17 +88,29 @@ public class Server {
       // Get the requested path with the local path
       String[] parts = route.strip().split(":", 2);
 
-      String requestedPath = parts[0];
+      // Ignore malformed route lines
+      if (parts.length != 2) continue;
+
+      String routePath = parts[0];
       String localPath = parts[1];
 
       // Remote requested file matches local file?
-      if (routePath.equals(requetedPath)) {
+      if (routePath.equals(requestedPath)) {
         try {
-          String contentType = getContentType(filePath);
-          return;
+          String fileContent = Files.readString(Paths.get(localPath));
+          String contentType = getContentType(localPath);
+          return "HTTP/1.1 200 OK\r\nContent-Type: " + contentType + "\r\n\r\n" + fileContent;
+        }
+        // File reading error
+        catch (IOException e) {
+          System.out.println("[-] Error opening file: " + e);
+          return "HTTP/1.1 500 Internal Server Error\r\n\r\nServer failed to read local file";
         }
       }
     }
+
+    // Route not found
+    return "HTTP/1.1 404 Not Found\r\n\r\nRequested resource not found";
   }
 
   // Main loop function for getting connections, and sending response
@@ -130,7 +149,6 @@ public class Server {
     }
   } // Main loop
 
-
   // Entry
   public static void main(String[] args) {
     // Usage failure
@@ -144,7 +162,7 @@ public class Server {
     String routeFilename = args[1];
 
     // Create main instance of server
-    Server server = new Server(serverPort);
+    Server server = new Server(serverPort, routeFilename);
     System.out.println("[*] Starting server");
 
     // Start main server loop
@@ -152,7 +170,6 @@ public class Server {
       server.mainLoop();
     }
   } // End main
-
 
   // Class to contain data for a client connection
   class ClientConnection {

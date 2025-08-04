@@ -6,5 +6,5 @@ javac *.java
 mv * ../build
 cd ../build
 mv *.java ../src
-java Server 8080
+java Server 8080 ../route/route.txt
 cd ..
