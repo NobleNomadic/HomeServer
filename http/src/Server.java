@@ -111,7 +111,7 @@ public class Server {
 
     // Route not found
     return "HTTP/1.1 404 Not Found\r\n\r\nRequested resource not found";
-  }
+  } // Generate response
 
   // Main loop function for getting connections, and sending response
   public void mainLoop() {

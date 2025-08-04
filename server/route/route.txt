@@ -1,3 +1,0 @@
-/:../../frontend/index.html
-/index.html:../../frontend/index.html
-/style.css:../../frontend/style.css
