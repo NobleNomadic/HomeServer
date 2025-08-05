@@ -120,6 +120,7 @@ public class Server {
 
       // Accept a client connection
       Socket clientSocket = this.acceptConnection();
+      if (clientSocket == null) return;
       System.out.println("[+] New connection");
 
       // Setup client connection object
