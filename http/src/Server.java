@@ -15,45 +15,38 @@ public class Server {
 
   // Constructor
   public Server(int serverPort, String routeFilename) {
-    // Setup server socket
-    try {
-      this.serverPort = serverPort;
-      serverSocket = new ServerSocket(this.serverPort);
-    }
-    // Catch socket creation failures
-    catch (IOException e) {
-      System.out.println("[-] Failed to create server socket:" + e);
-      System.exit(1);
-    }
-
-    // Setup route file and read data from file
+    this.serverPort = serverPort;
     this.routeFilename = routeFilename;
 
+    // Create server socket
     try {
-      // String to store the contents of route file as a single raw string
-      String routeFileContents;
-      Path routePath = Paths.get(this.routeFilename);
-
-      // Read into string
-      routeFileContents = Files.readString(routePath);
-
-      // Split the route file data into lines
-      this.routingData = routeFileContents.split("\n");
+      this.serverSocket = new ServerSocket(this.serverPort);
     }
-    // Error while reading route file
+    // Socket creation failed
     catch (IOException e) {
-      System.out.println("[-] Error reading route file:" + e);
+      System.out.println("[-] Failed to create server socket: " + e);
       System.exit(1);
     }
-  } // Constructor
 
-  // Accept and return a client connection object
+    // Read routing file into memory
+    try {
+      String routeFileContents = Files.readString(Paths.get(this.routeFilename));
+      this.routingData = routeFileContents.split("\n");
+    }
+    // Failed to read route file
+    catch (IOException e) {
+      System.out.println("[-] Error reading route file: " + e);
+      System.exit(1);
+    }
+  } // End constructor
+
+  // Accept and return a client socket
   private Socket acceptConnection() {
     try {
       Socket clientSocket = this.serverSocket.accept();
       return clientSocket;
     }
-    // Failed to accept client connection
+    // Failed to accept client
     catch (IOException e) {
       System.out.println("[-] Failed to accept client connection: " + e);
       return null;
@@ -71,105 +64,144 @@ public class Server {
     return "application/octet-stream";
   }
 
-  // Generate a string response to send back over socket
-  private String generateResponse(String request) {
-    // Convert string to tokens
-    String[] tokens = request.split(" ");
-    // Verify tokens
-    if (tokens.length < 3) {
-      return "HTTP/1.1 400 Bad Request\r\n\r\nMalformed HTTP request line";
-    }
+  // Handle request and send raw file as response
+  private void handleRequest(ClientConnection client) {
+    try {
+      // Read request line
+      String requestLine = client.in.readLine();
 
-    // Process the requested path and get local file
-    String requestedPath = tokens[1];
+      // Invalid or empty request
+      if (requestLine == null || requestLine.isEmpty()) return;
 
-    // Attempt to convert the requested path to a local path using the routing data
-    for (String route : this.routingData) {
-      // Get the requested path with the local path
-      String[] parts = route.strip().split(":", 2);
+      System.out.println("[+] Received request\n" + requestLine);
 
-      // Ignore malformed route lines
-      if (parts.length != 2) continue;
+      // Split into tokens
+      String[] tokens = requestLine.split(" ");
+      if (tokens.length < 3) {
+        sendErrorResponse(client, "400 Bad Request", "Malformed request");
+        return;
+      }
 
-      String routePath = parts[0];
-      String localPath = parts[1];
+      // Get requested path
+      String method = tokens[0];
+      String path = tokens[1];
 
-      // Remote requested file matches local file?
-      if (routePath.equals(requestedPath)) {
-        try {
-          String fileContent = Files.readString(Paths.get(localPath));
+      // Only support GET
+      if (!method.equals("GET")) {
+        sendErrorResponse(client, "405 Method Not Allowed", "Only GET is supported");
+        return;
+      }
+
+      // Match against route file
+      for (String route : this.routingData) {
+        String[] parts = route.strip().split(":", 2);
+
+        // Skip malformed lines
+        if (parts.length != 2) continue;
+
+        String routePath = parts[0];
+        String localPath = parts[1];
+
+        // Match request to route
+        if (routePath.equals(path)) {
+          Path filePath = Paths.get(localPath).normalize();
+
+          // Check if file exists
+          if (!Files.exists(filePath) || Files.isDirectory(filePath)) {
+            sendErrorResponse(client, "404 Not Found", "File not found");
+            return;
+          }
+
+          // Read file
+          byte[] fileBytes = Files.readAllBytes(filePath);
           String contentType = getContentType(localPath);
-          return "HTTP/1.1 200 OK\r\nContent-Type: " + contentType + "\r\n\r\n" + fileContent;
-        }
-        // File reading error
-        catch (IOException e) {
-          System.out.println("[-] Error opening file: " + e);
-          return "HTTP/1.1 500 Internal Server Error\r\n\r\nServer failed to read local file";
+
+          // Send response
+          sendFileResponse(client, "200 OK", contentType, fileBytes);
+          return;
         }
       }
+
+      // No matching route
+      sendErrorResponse(client, "404 Not Found", "No matching route");
     }
+    // Handle read error
+    catch (IOException e) {
+      System.out.println("[-] Error handling request: " + e);
+    }
+  }
 
-    // Route not found
-    return "HTTP/1.1 404 Not Found\r\n\r\nRequested resource not found";
-  } // Generate response
+  // Send raw file response with headers
+  private void sendFileResponse(ClientConnection client, String status, String contentType, byte[] content) throws IOException {
+    String header = "HTTP/1.1 " + status + "\r\n" +
+                    "Content-Type: " + contentType + "\r\n" +
+                    "Content-Length: " + content.length + "\r\n" +
+                    "Access-Control-Allow-Origin: *\r\n" +
+                    "\r\n";
+    client.out.print(header);
+    client.out.flush();
+    client.clientSocket.getOutputStream().write(content);
+    client.clientSocket.getOutputStream().flush();
+  }
 
-  // Main loop function for getting connections, and sending response
+  // Send error with plain text message
+  private void sendErrorResponse(ClientConnection client, String status, String message) {
+    String response = "HTTP/1.1 " + status + "\r\n" +
+                      "Content-Type: text/plain\r\n" +
+                      "Content-Length: " + message.length() + "\r\n" +
+                      "Access-Control-Allow-Origin: *\r\n" +
+                      "\r\n" +
+                      message;
+    client.out.print(response);
+    client.out.flush();
+  }
+
+  // Main server loop
   public void mainLoop() {
-    try {
-      System.out.println("[*] Waiting for connection on port " + this.serverPort);
+    System.out.println("[*] Waiting for connection on port " + this.serverPort);
 
-      // Accept a client connection
+    while (true) {
       Socket clientSocket = this.acceptConnection();
-      if (clientSocket == null) return;
+      if (clientSocket == null) continue;
+
       System.out.println("[+] New connection");
 
       // Setup client connection object
-      ClientConnection clientConnection = new ClientConnection(clientSocket);
+      ClientConnection client = new ClientConnection(clientSocket);
 
-      // Receive request
-      String request = clientConnection.in.readLine();
-      System.out.println("[+] Received request\n" + request);
-
-      // Generate a response
-      String response = generateResponse(request);
-      System.out.println("[+] Sending response\n" + response);
-
-      // Send response to client
-      clientConnection.out.println(response);
+      // Handle request
+      this.handleRequest(client);
 
       // Close connection
-      clientConnection.in.close();
-      clientConnection.out.close();
-      clientConnection.clientSocket.close();
-      return;
+      try {
+        client.in.close();
+        client.out.close();
+        client.clientSocket.close();
+      }
+      catch (IOException e) {
+        System.out.println("[-] Failed to close client connection: " + e);
+      }
     }
-    // Catch socket errors
-    catch (IOException e) {
-      System.out.println("[-] Server error: " + e);
-      return;
-    }
-  } // Main loop
+  } // End main loop
 
-  // Entry
+  // Entry point
   public static void main(String[] args) {
-    // Usage failure
+    // Usage check
     if (args.length < 2) {
       System.out.println("Usage: java Server <Port> <Route file>");
       System.exit(1);
     }
 
-    // Extract arguments
+    // Extract args
     int serverPort = Integer.parseInt(args[0]);
     String routeFilename = args[1];
 
-    // Create main instance of server
+    // Create server instance
     Server server = new Server(serverPort, routeFilename);
     System.out.println("[*] Starting server");
 
-    // Start main server loop
-    while (true) {
-      server.mainLoop();
-    }
+    // Start server loop
+    server.mainLoop();
   } // End main
 
   // Class to contain data for a client connection
@@ -184,9 +216,9 @@ public class Server {
       try {
         this.clientSocket = clientSocket;
         this.in = new BufferedReader(new InputStreamReader(this.clientSocket.getInputStream()));
-        this.out = new PrintWriter(clientSocket.getOutputStream(), true);
+        this.out = new PrintWriter(this.clientSocket.getOutputStream(), true);
       }
-      // Catch data stream setup failures
+      // Failed to setup data streams
       catch (IOException e) {
         System.out.println("[-] Error opening data streams with client socket: " + e);
       }
