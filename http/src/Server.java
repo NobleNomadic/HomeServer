@@ -142,6 +142,8 @@ public class Server {
     client.out.flush();
     client.clientSocket.getOutputStream().write(content);
     client.clientSocket.getOutputStream().flush();
+
+    System.out.println("[+] Sent file response\n" + header);
   }
 
   // Send error with plain text message
@@ -154,6 +156,8 @@ public class Server {
                       message;
     client.out.print(response);
     client.out.flush();
+
+    System.out.println("[+] Sent file response\n" + response);
   }
 
   // Main server loop

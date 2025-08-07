@@ -1,7 +1,8 @@
 /:../../frontend/index.html
 /index.html:../../frontend/index.html
 /style.css:../../frontend/style.css
-
 /files.html:../../frontend/files.html
 /media.html:../../frontend/media.html
 /virtualmachines.html:../../frontend/virtualmachines.html
+/media.js:../../frontend/media.js
+/media/sample.mp4:../../frontend/media/sample.mp4
