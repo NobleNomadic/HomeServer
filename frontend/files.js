@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const file = uploadInput.files[0];
     const fileName = encodeURIComponent(file.name);
-    const uploadUrl = `http://localhost:8080/upload?file=${fileName}`; // Adjust port as needed
+    const uploadUrl = `http://localhost:5400/upload?file=${fileName}`; // Adjust port as needed
 
     try {
       const response = await fetch(uploadUrl, {

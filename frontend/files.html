@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
   <title>Home Server</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono/css/variable.css">
   <link rel="stylesheet" href="style.css">
 </head>
 
@@ -17,7 +16,19 @@
       <a href="files.html" class="boxLink">Files</a>
       <a href="media.html" class="boxLink">Media</a>
     </div>
-
   </div>
+
+  <!-- Main section with file access -->
+  <div class="mainContent">
+    <div class="inputSection">
+      <!-- Title -->
+      <div class="inputTitleContainer"><h1 class="inputTitle">Files</h1></div>
+
+      <!-- Upload file button -->
+      <input type="file" id="uploadFileButton">
+    </div>
+  </div> <!-- End main content -->
+
+  <script src="files.js"></script>
 </body>
 </html>
