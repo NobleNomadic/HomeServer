@@ -34,7 +34,7 @@ body {
   width: 57%;
   border: 5px solid var(--accent);
   margin: 10px;
-  height: 480px;
+  height: 510px;
   padding: auto;
 }
 
@@ -42,7 +42,7 @@ body {
   width: 40%;
   border: 5px solid var(--alt);
   margin: 10px;
-  height: 480px;
+  height: 510px;
   display: grid;
   grid-template-rows: repeat(auto-fill, 1fr);
   grid-template-columns: 1fr;
