@@ -23,3 +23,39 @@ document.getElementById("triggerMovieLoad").addEventListener("click", function (
   container.appendChild(video);
 });
 
+// Function to load movie list from the server
+function loadMovieList() {
+  fetch('/media/')
+    .then(response => {
+      if (!response.ok) throw new Error("Failed to load movie list");
+      return response.text();
+    })
+    .then(text => {
+      // Split plain text into list of movies
+      const movieList = text.trim().split("\n");
+
+      const listContainer = document.querySelector(".movieList");
+      listContainer.innerHTML = "<h3>Available Movies:</h3>";
+
+      const ul = document.createElement("ul");
+
+      movieList.forEach(movie => {
+        const li = document.createElement("li");
+        li.textContent = movie;
+        li.style.cursor = "pointer";
+        li.addEventListener("click", () => {
+          document.getElementById("movieNameInput").value = movie;
+        });
+        ul.appendChild(li);
+      });
+
+      listContainer.appendChild(ul);
+    })
+    .catch(err => {
+      console.error("Error loading movie list:", err);
+      document.querySelector(".movieList").innerText = "Failed to load movie list.";
+    });
+}
+
+// Load movie list when the page is loaded
+window.addEventListener("DOMContentLoaded", loadMovieList);

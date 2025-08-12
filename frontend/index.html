@@ -6,16 +6,33 @@
 </head>
 
 <body>
-  <div class="contentContainer">
-    <div class="leftContent">
-      <h1 class="title">Home<br>Server</h1>
+  <!-- Large section to contain all main content -->
+  <div class="mainContent">
+    <!-- Input section to contain data for loading movies -->
+    <div class="inputTitleContainer">
+      <h1 class="inputTitle">Movie Player</h1>
     </div>
 
-    <div class="rightContent">
-      <a href="index.html" class="boxLink">Home</a>
-      <a href="media.html" class="boxLink">Media</a>
+    <div class="inputSection">
+      <span>
+        <input type="text" id="movieNameInput">
+      </span>
+
+      <button id="triggerMovieLoad">Load movie</button>
+    </div> <!-- End input section -->
+    <div class="spacer"></div>
+
+    <!-- Movie list section -->
+    <div class="movieList"></div>
+
+
+    <div class="movieBox">
+    <!-- Javascript will insert the movie into this div -->
+      <div id="movieContainer"></div>
     </div>
 
-  </div>
+  </div> <!-- End main content -->
+
+  <script src="media.js"></script>
 </body>
 </html>
